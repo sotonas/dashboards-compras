@@ -4,3 +4,355 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CIE Egaña — Dashboard Compras Enero 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0f14; --surface: #13161d; --surface2: #1a1e27; --border: #252a35;
+  --text: #e4e7ed; --dim: #7a8299; --accent: #4f8ff7; --green: #34d399;
+  --red: #f87171; --yellow: #fbbf24;
+  --accent-d: rgba(79,143,247,0.12); --green-d: rgba(52,211,153,0.12);
+  --red-d: rgba(248,113,113,0.12); --yellow-d: rgba(251,191,36,0.12);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; padding:28px; min-height:100vh; }
+
+.header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+.header h1 { font-size:24px; font-weight:700; letter-spacing:-0.5px; }
+.header .sub { font-size:13px; color:var(--dim); margin-top:4px; }
+.date-badge { font-family:'JetBrains Mono',monospace; font-size:11px; padding:5px 12px; border-radius:6px; background:var(--accent-d); color:var(--accent); }
+
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+.kpi { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 22px; position:relative; overflow:hidden; }
+.kpi::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.kpi.blue::before { background:var(--accent); } .kpi.red::before { background:var(--red); }
+.kpi.yellow::before { background:var(--yellow); } .kpi.green::before { background:var(--green); }
+.kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--dim); font-weight:600; margin-bottom:6px; }
+.kpi-val { font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:700; }
+.kpi-det { font-size:12px; color:var(--dim); margin-top:4px; }
+
+.insights { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:24px; }
+.insights h3 { font-size:13px; font-weight:600; color:var(--accent); margin-bottom:10px; }
+.insight { font-size:12px; color:var(--dim); padding:4px 0; display:flex; gap:8px; align-items:flex-start; }
+.insight .icon { flex-shrink:0; }
+
+.controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+.tab-btn { padding:8px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .2s; font-family:inherit; }
+.tab-btn.active { background:var(--accent); color:#fff; }
+.tab-btn:not(.active) { background:transparent; color:var(--dim); }
+.tab-btn:not(.active):hover { color:var(--text); }
+
+.filter-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; align-items:center; }
+.fbtn { padding:4px 12px; border-radius:6px; font-size:11px; font-weight:500; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--dim); font-family:inherit; transition:all .15s; white-space:nowrap; }
+.fbtn:hover { border-color:var(--accent); color:var(--accent); }
+.fbtn.active { border-color:var(--accent); background:var(--accent-d); color:var(--accent); }
+.fbtn.sort-active { border-color:var(--yellow); background:var(--yellow-d); color:var(--yellow); }
+.sep { width:1px; height:20px; background:var(--border); margin:0 4px; }
+
+.search { padding:6px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:12px; width:280px; outline:none; font-family:inherit; }
+.search:focus { border-color:var(--accent); }
+.search::placeholder { color:var(--dim); }
+
+.sort-row { display:flex; gap:6px; margin-bottom:12px; align-items:center; }
+.sort-label { font-size:11px; color:var(--dim); margin-right:4px; }
+.summary-text { font-size:11px; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-left:auto; }
+
+.table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:12px; min-width:900px; }
+thead th { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--dim); font-weight:600; padding:12px 12px; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+thead th.l { text-align:left; } thead th.r { text-align:right; }
+tbody td { padding:10px 12px; border-bottom:1px solid var(--border); }
+tbody tr { cursor:pointer; transition:background .15s; }
+tbody tr:hover { background:rgba(79,143,247,0.04); }
+tbody tr.expanded { background:var(--surface2); }
+.mono { font-family:'JetBrains Mono',monospace; font-size:12px; }
+.r { text-align:right; }
+.pos { color:var(--red); } .neg { color:var(--green); } .neutral { color:var(--dim); }
+
+.badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:4px; letter-spacing:0.5px; text-transform:uppercase; white-space:nowrap; display:inline-block; }
+.badge-hr { background:var(--accent-d); color:var(--accent); }
+.badge-cr { background:var(--green-d); color:var(--green); }
+.badge-hdg { background:var(--yellow-d); color:var(--yellow); }
+.badge-inox { background:rgba(192,132,252,0.12); color:#c084fc; }
+.badge-na { background:var(--surface2); color:var(--dim); }
+.badge-warn { background:var(--yellow-d); color:var(--yellow); }
+
+.bar-track { height:16px; background:var(--surface2); border-radius:4px; overflow:hidden; position:relative; width:100%; min-width:80px; }
+.bar-fill { position:absolute; top:0; bottom:0; border-radius:4px; transition:width .5s ease; }
+.bar-fill.over { background:rgba(248,113,113,0.3); left:0; }
+.bar-fill.under { background:rgba(52,211,153,0.3); right:0; }
+
+.detail-row td { padding:14px 20px; background:var(--surface2); }
+.detail-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; font-size:12px; }
+.detail-grid .dl { color:var(--dim); } .detail-grid .dv { font-weight:600; }
+
+.footer { text-align:center; margin-top:28px; padding-top:16px; border-top:1px solid var(--border); font-size:11px; color:var(--dim); }
+
+@media (max-width:900px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+@media print {
+  body { background:#fff; color:#111; padding:16px; font-size:11px; }
+  .kpi,.table-wrap,.insights { background:#fafafa; border-color:#ddd; }
+  .kpi::before { display:none; }
+  thead th { background:#f0f0f0; }
+  .pos { color:#c00; } .neg { color:#060; }
+  .controls,.filter-row,.sort-row,.search { display:none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Dashboard Compras — CIE Egaña</h1>
+    <div class="sub">Enero 2026 · Presupuesto vs Real · ZMPV + Componentes</div>
+  </div>
+  <span class="date-badge">16.02.2026</span>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi blue"><div class="kpi-label">Compras Reales Enero</div><div class="kpi-val">1.526.274 €</div><div class="kpi-det">47 materiales · 16 proveedores</div></div>
+  <div class="kpi yellow"><div class="kpi-label">Presupuesto Enero</div><div class="kpi-val">1.115.679 €</div><div class="kpi-det">Mensualización 9,72% del anual</div></div>
+  <div class="kpi red"><div class="kpi-label">Desviación Total</div><div class="kpi-val" style="color:var(--red)">+410.595 €</div><div class="kpi-det">+36,8% sobre presupuesto</div></div>
+  <div class="kpi green"><div class="kpi-label">Mayor Ahorro</div><div class="kpi-val" style="font-size:18px;color:var(--green)">Acerinox 604619</div><div class="kpi-det">−54.774 € (−38,2%)</div></div>
+</div>
+
+<div class="insights">
+  <h3>Alertas e insights</h3>
+  <div class="insight"><span class="icon" style="color:var(--red)">⚠</span><span>Recyde mat. 643718: precio real 0,230 vs JG PPTO 0,167 (+38%). Sobrecarga temporal por cambio de proveedor.</span></div>
+  <div class="insight"><span class="icon" style="color:var(--red)">⚠</span><span>Recyde mat. 643714: precio real 0,130 vs JG PPTO 0,100 (+31%). Mismo caso.</span></div>
+  <div class="insight"><span class="icon" style="color:var(--red)">⚠</span><span>Stellantis: 5 materiales DP590 sin PPTO asignado (84K€). Posibles nuevas referencias no presupuestadas.</span></div>
+  <div class="insight"><span class="icon" style="color:var(--accent)">ℹ</span><span>Comal Ferlatta: mat. 311857 compra spot (4.460€). No presupuestado.</span></div>
+  <div class="insight"><span class="icon" style="color:var(--accent)">ℹ</span><span>Acerinox: 604619 INOX bajo presupuesto (−54.774€, −38%). Posible menor producción de piezas INOX en enero.</span></div>
+</div>
+
+<div class="controls">
+  <button class="tab-btn active" data-tab="zmpv" onclick="switchTab('zmpv')">ZMPV — Materia Prima</button>
+  <button class="tab-btn" data-tab="comp" onclick="switchTab('comp')">COMP — Componentes</button>
+  <div style="flex:1"></div>
+  <input class="search" id="searchInput" placeholder="Buscar material, código, proveedor..." oninput="applyFilters()">
+</div>
+
+<div class="filter-row" id="filterRow"></div>
+<div class="sort-row">
+  <span class="sort-label">Ordenar:</span>
+  <button class="fbtn sort-active" data-sort="desv_abs" onclick="setSort('desv_abs')">|Desviación|</button>
+  <button class="fbtn" data-sort="desv_pos" onclick="setSort('desv_pos')">Mayor exceso</button>
+  <button class="fbtn" data-sort="desv_neg" onclick="setSort('desv_neg')">Mayor ahorro</button>
+  <button class="fbtn" data-sort="eurR" onclick="setSort('eurR')">Mayor importe</button>
+  <button class="fbtn" data-sort="mat" onclick="setSort('mat')">Código</button>
+  <span class="summary-text" id="summaryText"></span>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead id="thead"></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="footer">CIE Egaña · Fuentes: SAP ZMML07 (compras reales) + Presupuesto Compras 2026 v14 · Generado 16.02.2026</div>
+
+<script>
+const DATA = {
+zmpv: [
+{mat:"568503",desc:"FLEJE HDT560F (PSA FB60) 4,5 X 514",fam:"HR",provR:"Stellantis auto sas",provP:"ReSale PSA Gonvarri",tonsR:122.09,eurR:131613.02,eurP:43008.79,desv:88604.23,desvPct:206.01,precioP:1078,clientes:"CIE AUTOMOTIVE, STELLANTIS"},
+{mat:"649069",desc:"DP590 G7/7 249 x 1,50",fam:"HDG",provR:"Stellantis auto sas",provP:"ReSale PSA Gonvarri",tonsR:80.98,eurR:98714.62,eurP:35911.29,desv:62803.33,desvPct:174.88,precioP:1219,clientes:"STELLANTIS"},
+{mat:"552337",desc:"FLEJE S420MC 3,50x499",fam:"HR",provR:"Gonvarri",provP:"Pool Brose Gonvarri",tonsR:78.71,eurR:72806.75,eurP:16861,desv:55945.75,desvPct:331.81,precioP:925,clientes:"BROSE"},
+{mat:"604619",desc:"FLEJE AISI 304 +CP350 3,00x363 mm",fam:"INOX",provR:"Acerinox / Inox. Euskadi",provP:"Acerinox",tonsR:35.62,eurR:88581.97,eurP:143355.66,desv:-54773.69,desvPct:-38.21,precioP:2950,clientes:"RENAULT"},
+{mat:"531589",desc:"FLEJE S420MC 1,80x945",fam:"HR",provR:"Gonvarri",provP:"Pool Brose Gonvarri",tonsR:78.49,eurR:77705.1,eurP:32285.74,desv:45419.36,desvPct:140.68,precioP:990,clientes:"BROSE"},
+{mat:"563354",desc:"DC04 MOD +LC ZA 2,00x390",fam:"CR",provR:"Bilstein",provP:"Bilstein",tonsR:113.49,eurR:148667.97,eurP:104438.92,desv:44229.05,desvPct:42.35,precioP:1295,clientes:"CONTINENTAL"},
+{mat:"648988",desc:"DP590 G7/7 240 X 2,0",fam:"HR",provR:"Stellantis auto sas",provP:"Sin PPTO",tonsR:23.12,eurR:27928.96,eurP:0,desv:27928.96,desvPct:0,precioP:0,clientes:""},
+{mat:"629978",desc:"HCT780X 1126 x 1,20 mm",fam:"HR",provR:"Gonvarri",provP:"Pool Brose Gonvarri",tonsR:39.56,eurR:46680.8,eurP:24229.53,desv:22451.27,desvPct:92.66,precioP:1180,clientes:"BROSE"},
+{mat:"506044",desc:"S420MC 2,75x570",fam:"HR",provR:"Gonvarri",provP:"Gonvarri",tonsR:78.35,eurR:59232.6,eurP:37505.83,desv:21726.77,desvPct:57.93,precioP:792,clientes:"CIE AUTOMOTIVE"},
+{mat:"629981",desc:"S500MC 1071 x 3,50 mm",fam:"HR",provR:"Gonvarri",provP:"Pool Brose Gonvarri",tonsR:39.54,eurR:37760.7,eurP:57183.88,desv:-19423.18,desvPct:-33.97,precioP:955,clientes:"BROSE"},
+{mat:"649067",desc:"DP590 g7/7 276 x 1,50",fam:"HR",provR:"Stellantis auto sas",provP:"Sin PPTO",tonsR:15.47,eurR:18857.93,eurP:0,desv:18857.93,desvPct:0,precioP:0,clientes:""},
+{mat:"649066",desc:"DP590 G7/7 265 x 1,50",fam:"HR",provR:"Stellantis auto sas",provP:"Sin PPTO",tonsR:13.7,eurR:16700.3,eurP:0,desv:16700.3,desvPct:0,precioP:0,clientes:""},
+{mat:"649068",desc:"DP590 G7/7 273 x 1,50",fam:"HR",provR:"Stellantis auto sas",provP:"Sin PPTO",tonsR:11.12,eurR:13555.28,eurP:0,desv:13555.28,desvPct:0,precioP:0,clientes:""},
+{mat:"643713",desc:"DD14 410 X 2,0 mm",fam:"HR",provR:"Gonvarri",provP:"Gonvarri",tonsR:145.36,eurR:113264.52,eurP:100925.09,desv:12339.43,desvPct:12.23,precioP:789,clientes:"RENAULT"},
+{mat:"583016",desc:"H340LAD+Z140 MBO 2,00x56 mm",fam:"HDG",provR:"Gonvarri",provP:"Gonvarri",tonsR:39.34,eurR:36389.5,eurP:24991.38,desv:11398.12,desvPct:45.61,precioP:925,clientes:"RENAULT, OTHER TIER1"},
+{mat:"642755",desc:"DC05 343 x 1,5 mm",fam:"CR",provR:"Layde Steel",provP:"Layde",tonsR:136.53,eurR:101578.32,eurP:111680.47,desv:-10102.15,desvPct:-9.05,precioP:808,clientes:"OTHER TIER1"},
+{mat:"620563",desc:"HC500LA 538 x 2 mm",fam:"CR",provR:"Gonvarri",provP:"Pool Brose Gonvarri",tonsR:24.18,eurR:27202.5,eurP:17356.83,desv:9845.67,desvPct:56.73,precioP:1125,clientes:"BROSE"},
+{mat:"559496",desc:"HC420LA 0,80x430",fam:"CR",provR:"Gonvarri",provP:"Pool Brose Gonvarri",tonsR:12.59,eurR:13597.2,eurP:5414.65,desv:8182.55,desvPct:151.12,precioP:1080,clientes:"BROSE"},
+{mat:"648969",desc:"DP590 G7/7 108 X 1,5",fam:"HR",provR:"Stellantis auto sas",provP:"Sin PPTO",tonsR:5.76,eurR:7044.48,eurP:0,desv:7044.48,desvPct:0,precioP:0,clientes:""},
+{mat:"311882",desc:"HC380LA 1mmx525mm",fam:"CR",provR:"Gonvarri",provP:"Gonvarri",tonsR:9.17,eurR:7721.14,eurP:1754.28,desv:5966.86,desvPct:340.13,precioP:874,clientes:"BOSCH"},
+{mat:"311822",desc:"DC05 1,00mmx632mm",fam:"CR",provR:"Gonvarri",provP:"Gonvarri",tonsR:15.84,eurR:12782.88,eurP:6964.44,desv:5818.44,desvPct:83.55,precioP:839,clientes:"BOSCH"},
+{mat:"559429",desc:"HC420LA 0,80 x 240 mm",fam:"CR",provR:"Gonvarri",provP:"Pool Brose Gonvarri",tonsR:10.08,eurR:10886.4,eurP:5531.46,desv:5354.94,desvPct:96.81,precioP:1080,clientes:"BROSE"},
+{mat:"311857",desc:"DC05 BM 0,9mmx379mm (SPOT)",fam:"CR",provR:"Comal Ferlatta (spot)",provP:"Sin PPTO",tonsR:4.8,eurR:4460.28,eurP:0,desv:4460.28,desvPct:0,precioP:0,clientes:""},
+{mat:"676727",desc:"DD11 2,00x206",fam:"HR",provR:"Gonvarri",provP:"Gonvarri",tonsR:8.93,eurR:6492.11,eurP:3130.62,desv:3361.49,desvPct:107.37,precioP:800,clientes:"RENAULT"},
+{mat:"326160",desc:"DC05 AM 1,00x679mm",fam:"CR",provR:"Gonvarri",provP:"Gonvarri",tonsR:24.36,eurR:19658.52,eurP:16379.48,desv:3279.04,desvPct:20.02,precioP:839,clientes:"BOSCH"},
+{mat:"629975",desc:"S500MC 1040 x 3,50 mm",fam:"HR",provR:"Gonvarri",provP:"Pool Brose Gonvarri",tonsR:53.42,eurR:50481.9,eurP:53485.61,desv:-3003.71,desvPct:-5.62,precioP:945,clientes:"BROSE"},
+{mat:"643495",desc:"DD14 334 x 2,9 mm",fam:"HR",provR:"Gonvarri",provP:"Gonvarri",tonsR:127.97,eurR:105703.22,eurP:102767.62,desv:2935.6,desvPct:2.86,precioP:826,clientes:"RENAULT"},
+{mat:"649173",desc:"HD380LA 242 X 3,0",fam:"HR",provR:"Stellantis auto sas",provP:"ReSale PSA Layde",tonsR:9.28,eurR:9507.9,eurP:10507.78,desv:-999.88,desvPct:-9.52,precioP:1025,clientes:"STELLANTIS"},
+{mat:"637409",desc:"HX380LA Z140 2,00 x 132 mm",fam:"HDG",provR:"Stellantis auto sas",provP:"Sin PPTO",tonsR:-0.83,eurR:-926.28,eurP:0,desv:-926.28,desvPct:0,precioP:0,clientes:""},
+{mat:"648990",desc:"HD380LA 88 X 3,0",fam:"HR",provR:"Stellantis auto sas",provP:"ReSale PSA Layde",tonsR:3.52,eurR:3634.51,eurP:4345.83,desv:-711.32,desvPct:-16.37,precioP:1034,clientes:"STELLANTIS"},
+{mat:"516204",desc:"HC260LA 0,6x455mm",fam:"CR",provR:"Gonvarri",provP:"Gonvarri",tonsR:11.12,eurR:8907.12,eurP:8582.57,desv:324.55,desvPct:3.78,precioP:833,clientes:"BOSCH"},
+{mat:"456109",desc:"HC260Y 0,70x586mm",fam:"CR",provR:"Gonvarri",provP:"Gonvarri",tonsR:9.99,eurR:8781.21,eurP:8961.18,desv:-179.97,desvPct:-2.01,precioP:911,clientes:"BOSCH"}
+],
+comp: [
+{mat:"643717",desc:"266866241R INNLET",provR:"JG Automotive",provP:"JG",cantR:86400,eurR:36288,eurP:40824,desv:-4536,desvPct:-11.11,precioR:0.42,precioP:0.42,clientes:"RENAULT"},
+{mat:"531590",desc:"TUERCAS YQS-42060-X",provR:"PennEngineering",provP:"PEM",cantR:108290,eurR:8261.45,eurP:5021.11,desv:3240.34,desvPct:64.53,precioR:0.076,precioP:0.076,clientes:"BROSE"},
+{mat:"652104",desc:"AGRAFE FIXATION 9649174480",provR:"Hellermann Tyton",provP:"HELLEMANN",cantR:32400,eurR:3272.4,eurP:58.9,desv:3213.5,desvPct:5455.56,precioR:0.101,precioP:0.101,clientes:"STELLANTIS"},
+{mat:"531587",desc:"BUSHING COLLAR 906546-101",provR:"Saint-Gobain",provP:"Saint-Gobain",cantR:65000,eurR:3874,eurP:1961.32,desv:1912.68,desvPct:97.52,precioR:0.06,precioP:0.06,clientes:"BROSE"},
+{mat:"642726",desc:"TUERCA M20x1,5 ref 505249",provR:"JG Automotive",provP:"JG",cantR:225000,eurR:49500,eurP:51321.6,desv:-1821.6,desvPct:-3.55,precioR:0.22,precioP:0.22,clientes:"OTHER TIER1"},
+{mat:"649100",desc:"M6 L25 VIS SOUDE",provR:"PECOL",provP:"PECOL",cantR:70000,eurR:1596,eurP:3333.1,desv:-1737.1,desvPct:-52.12,precioR:0.023,precioP:0.023,clientes:"STELLANTIS"},
+{mat:"643714",desc:"cover assy bracket B pequeño",provR:"RECYDE (→ JG)",provP:"JG",cantR:50250,eurR:6532.5,eurP:4035.7,desv:1696.8,desvPct:35.09,precioR:0.13,precioP:0.10,clientes:"RENAULT"},
+{mat:"673322",desc:"M8 ECROU SOUDE",provR:"NTS (Walter Martinez)",provP:"TSF",cantR:15600,eurR:1146.6,eurP:2600.49,desv:-1453.89,desvPct:-55.91,precioR:0.074,precioP:0.074,clientes:"STELLANTIS"},
+{mat:"676728",desc:"TORNILLO SOLD M6x35",provR:"PECOL",provP:"PECOL",cantR:42000,eurR:1591.8,eurP:486.27,desv:1105.53,desvPct:227.35,precioR:0.038,precioP:0.038,clientes:"RENAULT"},
+{mat:"630023",desc:"Bolt C08240",provR:"ESKA",provP:"ESKA",cantR:58800,eurR:3428.04,eurP:2410.72,desv:1017.32,desvPct:42.2,precioR:0.058,precioP:0.059,clientes:"BROSE"},
+{mat:"583017",desc:"TORNILLOS YQFH-64989-P107",provR:"PennEngineering",provP:"PEM",cantR:83790,eurR:2762.56,eurP:1858.72,desv:903.84,desvPct:48.63,precioR:0.033,precioP:0.033,clientes:"OTHER TIER1"},
+{mat:"649001",desc:"tuerca M8 7903042052",provR:"Walter Martinez",provP:"TUHEWI",cantR:45100,eurR:1443.2,eurP:2339.02,desv:-895.82,desvPct:-38.3,precioR:0.032,precioP:0.032,clientes:"STELLANTIS"},
+{mat:"649036",desc:"RIVETED SCREW M6 L20",provR:"NTS",provP:"TSF",cantR:60000,eurR:1914,eurP:2180.24,desv:-266.24,desvPct:-12.21,precioR:0.032,precioP:0.032,clientes:"STELLANTIS"},
+{mat:"649171",desc:"Torn M6x45 mm 7903011390",provR:"Walter Martinez",provP:"TUHEWI",cantR:70000,eurR:2590,eurP:2704.49,desv:-114.49,desvPct:-4.23,precioR:0.037,precioP:0.037,clientes:"STELLANTIS"},
+{mat:"643718",desc:"cover assy bracket A grande",provR:"RECYDE (→ JG)",provP:"JG",cantR:70000,eurR:16100,eurP:16183.8,desv:-83.8,desvPct:-0.52,precioR:0.23,precioP:0.17,clientes:"RENAULT"}
+]
+};
+
+let currentTab = 'zmpv';
+let currentFilter = 'all';
+let currentSort = 'desv_abs';
+let expandedRow = null;
+
+function fmt(n) { return Math.round(n).toLocaleString('es-ES'); }
+function fmtDec(n,d) { return n.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtPct(n) { return n===0?'N/A':(n>0?'+':'')+fmtDec(n,1)+'%'; }
+
+function famBadge(f) {
+  const cls = {HR:'badge-hr',CR:'badge-cr',HDG:'badge-hdg',INOX:'badge-inox'}[f]||'badge-na';
+  return `<span class="badge ${cls}">${f||'?'}</span>`;
+}
+
+function switchTab(tab) {
+  currentTab = tab; currentFilter = 'all'; expandedRow = null;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
+  document.getElementById('searchInput').value = '';
+  buildFilters(); render();
+}
+
+function buildFilters() {
+  const items = DATA[currentTab];
+  const provs = [...new Set(items.map(r=>r.provR))].sort();
+  const fams = currentTab==='zmpv' ? [...new Set(items.map(r=>r.fam).filter(Boolean))].sort() : [];
+  let html = '';
+  html += `<button class="fbtn ${currentFilter==='all'?'active':''}" onclick="setFilter('all')">Todos</button>`;
+  html += `<button class="fbtn ${currentFilter==='over'?'active':''}" onclick="setFilter('over')">Sobre PPTO</button>`;
+  html += `<button class="fbtn ${currentFilter==='under'?'active':''}" onclick="setFilter('under')">Bajo PPTO</button>`;
+  html += `<button class="fbtn ${currentFilter==='noppto'?'active':''}" onclick="setFilter('noppto')">Sin PPTO</button>`;
+  html += '<span class="sep"></span>';
+  provs.forEach(p => {
+    const k = 'prov:'+p;
+    const label = p.length>18 ? p.slice(0,16)+'…' : p;
+    html += `<button class="fbtn ${currentFilter===k?'active':''}" onclick="setFilter('${k}')">${label}</button>`;
+  });
+  if (fams.length) {
+    html += '<span class="sep"></span>';
+    fams.forEach(f => {
+      const k = 'fam:'+f;
+      html += `<button class="fbtn ${currentFilter===k?'active':''}" onclick="setFilter('${k}')">${f}</button>`;
+    });
+  }
+  document.getElementById('filterRow').innerHTML = html;
+}
+
+function setFilter(f) { currentFilter = (currentFilter===f && f!=='all') ? 'all' : f; expandedRow=null; buildFilters(); render(); }
+function setSort(s) {
+  currentSort = s; expandedRow=null;
+  document.querySelectorAll('.sort-row .fbtn').forEach(b => b.classList.toggle('sort-active', b.dataset.sort===s));
+  render();
+}
+function applyFilters() { expandedRow=null; render(); }
+
+function getFiltered() {
+  let items = [...DATA[currentTab]];
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  if (currentFilter==='over') items = items.filter(r=>r.desv>0);
+  else if (currentFilter==='under') items = items.filter(r=>r.desv<0);
+  else if (currentFilter==='noppto') items = items.filter(r=>r.eurP===0);
+  else if (currentFilter.startsWith('prov:')) items = items.filter(r=>r.provR===currentFilter.slice(5));
+  else if (currentFilter.startsWith('fam:')) items = items.filter(r=>r.fam===currentFilter.slice(4));
+  if (search) items = items.filter(r => r.mat.includes(search)||r.desc.toLowerCase().includes(search)||r.provR.toLowerCase().includes(search));
+  if (currentSort==='desv_abs') items.sort((a,b)=>Math.abs(b.desv)-Math.abs(a.desv));
+  else if (currentSort==='desv_pos') items.sort((a,b)=>b.desv-a.desv);
+  else if (currentSort==='desv_neg') items.sort((a,b)=>a.desv-b.desv);
+  else if (currentSort==='eurR') items.sort((a,b)=>b.eurR-a.eurR);
+  else if (currentSort==='mat') items.sort((a,b)=>a.mat.localeCompare(b.mat));
+  return items;
+}
+
+function toggleRow(idx) { expandedRow = expandedRow===idx ? null : idx; render(); }
+
+function render() {
+  const items = getFiltered();
+  const maxDesv = Math.max(...items.map(r=>Math.abs(r.desv)),1);
+  const isZ = currentTab==='zmpv';
+
+  // Header
+  let th = '<tr>';
+  th += '<th class="l">Material</th><th class="l">Descripción</th><th class="l">Proveedor</th>';
+  if (isZ) th += '<th class="l">Fam.</th>';
+  th += '<th class="r">Real €</th><th class="r">PPTO €</th><th class="r">Desv. €</th><th class="r">%</th><th class="l" style="width:100px">Visual</th>';
+  th += '</tr>';
+  document.getElementById('thead').innerHTML = th;
+
+  // Body
+  let html = '';
+  items.forEach((r,i) => {
+    const dc = r.desv>500?'pos':r.desv<-500?'neg':'neutral';
+    const isExp = expandedRow===i;
+    const barPct = Math.min(Math.abs(r.desv)/maxDesv*100,100);
+    const barCls = r.desv>=0?'over':'under';
+
+    let provCell = r.provR;
+    if (r.provR!==r.provP && r.provP!=='Sin PPTO') provCell += ` <span style="color:var(--dim);font-size:10px">(P: ${r.provP})</span>`;
+    if (r.provP==='Sin PPTO') provCell += ` <span class="badge badge-warn">sin ppto</span>`;
+
+    html += `<tr class="${isExp?'expanded':''}" onclick="toggleRow(${i})">`;
+    html += `<td class="mono" style="font-weight:500">${r.mat}</td>`;
+    html += `<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.desc}</td>`;
+    html += `<td style="font-size:11px">${provCell}</td>`;
+    if (isZ) html += `<td>${famBadge(r.fam)}</td>`;
+    html += `<td class="r mono">${fmt(r.eurR)}</td>`;
+    html += `<td class="r mono" style="color:${r.eurP===0?'var(--dim)':'var(--text)'}">${r.eurP===0?'—':fmt(r.eurP)}</td>`;
+    html += `<td class="r mono ${dc}" style="font-weight:600">${r.desv>0?'+':''}${fmt(r.desv)}</td>`;
+    html += `<td class="r mono ${dc}" style="font-size:11px">${r.eurP>0?fmtPct(r.desvPct):'—'}</td>`;
+    html += `<td><div class="bar-track"><div class="bar-fill ${barCls}" style="width:${barPct}%"></div></div></td>`;
+    html += '</tr>';
+
+    if (isExp) {
+      const cols = isZ ? 9 : 8;
+      html += `<tr class="detail-row"><td colspan="${cols}"><div class="detail-grid">`;
+      if (isZ) {
+        const prReal = r.tonsR>0 ? Math.round(r.eurR/r.tonsR) : 0;
+        const prDiff = r.precioP>0&&prReal>0 ? prReal-r.precioP : null;
+        const prCol = prDiff>0?'var(--red)':prDiff<0?'var(--green)':'var(--dim)';
+        html += `<div><span class="dl">Tons real:</span> <span class="dv">${fmtDec(r.tonsR,2)}</span></div>`;
+        html += `<div><span class="dl">€/ton PPTO:</span> <span class="dv">${r.precioP>0?fmt(r.precioP):'—'}</span></div>`;
+        html += `<div><span class="dl">€/ton Real aprox:</span> <span class="dv">${prReal>0?fmt(prReal):'—'}</span></div>`;
+        html += `<div><span class="dl">Desv. precio €/ton:</span> <span class="dv" style="color:${prCol}">${prDiff!==null?(prDiff>0?'+':'')+fmt(prDiff):'—'}</span></div>`;
+        html += `<div><span class="dl">Familia:</span> <span class="dv">${r.fam||'N/A'}</span></div>`;
+        html += `<div><span class="dl">Clientes:</span> <span class="dv">${r.clientes||'N/A'}</span></div>`;
+      } else {
+        const prDiffPct = r.precioP>0 ? ((r.precioR-r.precioP)/r.precioP*100) : 0;
+        const prCol = prDiffPct>0.5?'var(--red)':prDiffPct<-0.5?'var(--green)':'var(--dim)';
+        html += `<div><span class="dl">Cantidad real:</span> <span class="dv">${fmt(r.cantR)} uds</span></div>`;
+        html += `<div><span class="dl">€/ud Real:</span> <span class="dv">${fmtDec(r.precioR,4)}</span></div>`;
+        html += `<div><span class="dl">€/ud PPTO:</span> <span class="dv">${fmtDec(r.precioP,4)}</span></div>`;
+        html += `<div><span class="dl">Desv. precio:</span> <span class="dv" style="color:${prCol}">${Math.abs(prDiffPct)>0.1?fmtPct(prDiffPct):'Sin desv.'}</span></div>`;
+        html += `<div><span class="dl">Prov. PPTO:</span> <span class="dv">${r.provP}</span></div>`;
+        html += `<div><span class="dl">Clientes:</span> <span class="dv">${r.clientes||'N/A'}</span></div>`;
+      }
+      html += '</div></td></tr>';
+    }
+  });
+  document.getElementById('tbody').innerHTML = html;
+
+  // Summary
+  const tR = items.reduce((s,r)=>s+r.eurR,0);
+  const tP = items.reduce((s,r)=>s+r.eurP,0);
+  document.getElementById('summaryText').textContent = `Filtrado: ${fmt(tR)} € real / ${fmt(tP)} € ppto (${items.length} mat.)`;
+}
+
+// Init
+buildFilters();
+render();
+</script>
+</body>
+</html>
